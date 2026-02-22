@@ -4,3 +4,5 @@ pat*.pkg
 docker-data/
 .aider*
 *.swp
+**/out/**/*
+

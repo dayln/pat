@@ -1,0 +1,11 @@
+{
+	"files": [],
+	"references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }],
+	"compilerOptions": {
+		"paths": {
+			"$lib": ["./src/lib"],
+			"$lib/*": ["./src/lib/*"],
+			"$app/types": ["./.svelte-kit/types/index.d.ts"]
+		}
+	}
+}
