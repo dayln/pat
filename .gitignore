@@ -1,5 +1,5 @@
 .build/
-pat
+*pat
 pat*.pkg
 docker-data/
 .aider*
