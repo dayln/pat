@@ -4,6 +4,7 @@
 	"exclude": ["src/electron/**/*"],
 	"compilerOptions": {
 		"composite": true,
+		"emitDeclarationOnly": true,
 		"rewriteRelativeImportExtensions": true,
 		"allowJs": true,
 		"checkJs": true,
