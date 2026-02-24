@@ -1,8 +1,18 @@
-import { contextBridge } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
 
-// Custom APIs for renderer
-const api = {};
+const api = {
+	getRMSList: (params: {
+		mode?: string;
+		band?: string;
+		forceDownload?: boolean;
+		predict?: boolean;
+	}) => ipcRenderer.invoke('pat:getRmsList', params),
+	getBandwidths: (mode: string) => ipcRenderer.invoke('pat:getBandwidths', mode),
+	getConnectAliases: () => ipcRenderer.invoke('pat:getConnectAliases'),
+	connectToStation: (rawUrl: string) => ipcRenderer.invoke('pat:connectToStation', rawUrl),
+	sendQsy: (data: { transport: string; freq: number }) => ipcRenderer.invoke('pat:sendQsy', data)
+};
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
