@@ -29,6 +29,16 @@ npm run dev
 npm run dev -- --open
 ```
 
+## Type checking
+
+Use the split checks to validate renderer and Electron code paths separately:
+
+```sh
+pnpm run check:web
+pnpm run check:node
+pnpm run check
+```
+
 ## Building
 
 To create a production version of your app:
