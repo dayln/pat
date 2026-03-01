@@ -5,15 +5,11 @@
 	let aliases = $state<ConnectionAliases | null>(null);
 	let aliasEntries = $state<[string, string][]>([]);
 	let isLoading = $state(false);
-	let isStarting = $state(false);
 	let isStatusLoading = $state(false);
 	let isRmsLoading = $state(false);
 	let errorMessage = $state('');
-	let startErrorMessage = $state('');
-	let startSuccessMessage = $state('');
 	let statusErrorMessage = $state('');
 	let rmsErrorMessage = $state('');
-	let callSign = $state('');
 	let patStatus = $state<PatStatus | null>(null);
 	let statusCheckedAt = $state('');
 	let rmsList = $state<RMSStation[]>([]);
@@ -45,39 +41,12 @@
 		try {
 			patStatus = await window.api.getStatus();
 			statusCheckedAt = new Date().toLocaleString();
-			console.log('[pat:start] UI status refreshed', patStatus);
+			console.log('[pat:process] UI status refreshed', patStatus);
 		} catch (error) {
 			statusErrorMessage = error instanceof Error ? error.message : 'Unknown error';
-			console.error('[pat:start] UI status check failed', { error });
+			console.error('[pat:process] UI status check failed', { error });
 		} finally {
 			isStatusLoading = false;
-		}
-	};
-
-	const startCall = async (): Promise<void> => {
-		const normalizedCallSign = callSign.trim().toUpperCase();
-		startErrorMessage = '';
-		startSuccessMessage = '';
-		console.log('[pat:start] UI start requested', { callSign: normalizedCallSign });
-
-		if (!normalizedCallSign) {
-			startErrorMessage = 'Callsign is required.';
-			return;
-		}
-
-		isStarting = true;
-		try {
-			await window.api.start(normalizedCallSign);
-			console.log('[pat:start] UI start completed', { callSign: normalizedCallSign });
-			await refreshStatus();
-			startSuccessMessage = `Pat started for ${normalizedCallSign}.`;
-			callSign = normalizedCallSign;
-		} catch (error) {
-			console.error('[pat:start] UI start failed', { callSign: normalizedCallSign, error });
-			startErrorMessage = error instanceof Error ? error.message : 'Unknown error';
-			console.error('Failed to start call:', error);
-		} finally {
-			isStarting = false;
 		}
 	};
 
@@ -121,28 +90,8 @@
 <main class="page">
 	<header class="page-header">
 		<h1>Pat Control Panel</h1>
-		<p>Start Pat, check process status, inspect aliases, and query RMS stations.</p>
+		<p>Pat starts with the app; check process status, inspect aliases, and query RMS stations.</p>
 	</header>
-
-	<section class="panel" aria-label="Start call">
-		<div class="section-header">
-			<h2>Start Call</h2>
-		</div>
-		<div class="action-row">
-			<label class="field" for="callsign">
-				<span>Callsign</span>
-				<input id="callsign" type="text" placeholder="e.g. K1ABC" bind:value={callSign} disabled={isStarting} />
-			</label>
-			<button type="button" class="primary-button" onclick={startCall} disabled={isStarting}>
-				{isStarting ? 'Starting...' : 'Start Call'}
-			</button>
-		</div>
-		{#if startErrorMessage}
-			<p class="message error" role="status">Failed to start: {startErrorMessage}</p>
-		{:else if startSuccessMessage}
-			<p class="message success" role="status">{startSuccessMessage}</p>
-		{/if}
-	</section>
 
 	<section class="panel" aria-label="Pat process status">
 		<div class="section-header">
@@ -162,10 +111,6 @@
 				<div>
 					<dt>PID</dt>
 					<dd><code>{patStatus.pid ?? 'N/A'}</code></dd>
-				</div>
-				<div>
-					<dt>Call</dt>
-					<dd><code>{patStatus.callSign ?? 'N/A'}</code></dd>
 				</div>
 				<div>
 					<dt>Exit Code</dt>
@@ -325,13 +270,6 @@
 		font-size: 1.1rem;
 	}
 
-	.action-row {
-		display: flex;
-		gap: 0.75rem;
-		align-items: end;
-		flex-wrap: wrap;
-	}
-
 	.field {
 		display: grid;
 		gap: 0.35rem;
@@ -388,11 +326,6 @@
 	.message.error {
 		background: #fff1f2;
 		color: #9f1239;
-	}
-
-	.message.success {
-		background: #ecfdf3;
-		color: #027a48;
 	}
 
 	.message.neutral {

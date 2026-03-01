@@ -5,10 +5,9 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 
 let patProcess: ChildProcess | null = null;
-let lastCallSign: string | null = null;
 let lastStartedAt: string | null = null;
 
-const logPrefix = '[pat:start]';
+const logPrefix = '[pat:process]';
 
 function isPatRunning(): boolean {
 	return patProcess !== null && patProcess.exitCode === null && !patProcess.killed;
@@ -20,7 +19,6 @@ function getPatStatus() {
 		pid: patProcess?.pid ?? null,
 		exitCode: patProcess?.exitCode ?? null,
 		killed: patProcess?.killed ?? false,
-		callSign: lastCallSign,
 		startedAt: lastStartedAt
 	};
 }
@@ -55,41 +53,41 @@ function attachPatLogging(child: ChildProcess): void {
 	});
 }
 
-export function setupIPChandlers(appPath: string) {
-	ipcMain.handle('pat:start', (_event, callSign: string) => {
-		const normalizedCallSign = callSign.trim().toUpperCase();
-		console.log(`${logPrefix} requested callsign=${normalizedCallSign} appPath=${appPath}`);
+export function startPatProcess(appPath: string): void {
+	if (isPatRunning()) {
+		console.log(`${logPrefix} already running pid=${patProcess?.pid ?? 'unknown'}`);
+		return;
+	}
 
-		if (!normalizedCallSign) {
-			throw new Error('Callsign is required.');
-		}
-
-		if (isPatRunning()) {
-			console.log(`${logPrefix} already running pid=${patProcess?.pid ?? 'unknown'}`);
-			return;
-		}
-
-		const executablePath = join(appPath, 'bin', 'pat');
-		if (!existsSync(executablePath)) {
-			console.error(`${logPrefix} executable not found at ${executablePath}`);
-			throw new Error(`pat executable not found at ${executablePath}`);
-		}
-
-		console.log(`${logPrefix} launching executable=${executablePath}`);
-		const child = spawn(executablePath, ['--mycall', normalizedCallSign, 'http'], {
-			cwd: appPath,
-			detached: true,
-			stdio: ['ignore', 'pipe', 'pipe']
-		});
-
-		patProcess = child;
-		lastCallSign = normalizedCallSign;
-		lastStartedAt = new Date().toISOString();
-		attachPatLogging(child);
-
-		// Allow pat to keep running independently from the Electron process.
-		child.unref();
+	const bundledPatPath = join(appPath, 'bin', 'pat');
+	const executable = existsSync(bundledPatPath) ? bundledPatPath : 'pat';
+	console.log(`${logPrefix} launching executable=${executable} command=http`);
+	const child = spawn(executable, ['http'], {
+		cwd: appPath,
+		stdio: ['ignore', 'pipe', 'pipe']
 	});
+
+	patProcess = child;
+	lastStartedAt = new Date().toISOString();
+	attachPatLogging(child);
+}
+
+export function stopPatProcess(reason: string): void {
+	if (!isPatRunning() || !patProcess) {
+		return;
+	}
+
+	const child = patProcess;
+	console.log(`${logPrefix} stopping pid=${child.pid ?? 'unknown'} reason=${reason}`);
+
+	try {
+		child.kill('SIGTERM');
+	} catch (error) {
+		console.error(`${logPrefix} failed to send SIGTERM:`, error);
+	}
+}
+
+export function setupIPChandlers() {
 
 	ipcMain.handle('pat:status', () => {
 		const status = getPatStatus();

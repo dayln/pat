@@ -22,7 +22,6 @@ export interface PatStatus {
 	pid: number | null;
 	exitCode: number | null;
 	killed: boolean;
-	callSign: string | null;
 	startedAt: string | null;
 }
 

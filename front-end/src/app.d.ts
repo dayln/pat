@@ -21,7 +21,6 @@ declare global {
 	interface Window {
 		electron: ElectronAPI;
 		api: {
-			start: (callSign: string) => Promise<void>;
 			getRMSList: (params: {
 				mode?: string;
 				band?: string;

@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron';
 import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
-import { setupIPChandlers } from './pat.ipc';
+import { setupIPChandlers, startPatProcess, stopPatProcess } from './pat.ipc';
 
 function createWindow(): void {
 	// Create the browser window.
@@ -24,6 +24,12 @@ function createWindow(): void {
 		shell.openExternal(details.url);
 		return { action: 'deny' };
 	});
+
+	if (process.platform !== 'darwin') {
+		mainWindow.on('close', () => {
+			stopPatProcess('window-close');
+		});
+	}
 
 	// HMR for renderer base on electron-vite cli.
 	// Load the remote URL for development or the local html file for production.
@@ -48,10 +54,8 @@ app.whenReady().then(() => {
 		optimizer.watchWindowShortcuts(window);
 	});
 
-	// IPC test
-	ipcMain.on('ping', () => console.log('pong'));
-
-	setupIPChandlers(app.getAppPath());
+	setupIPChandlers();
+	startPatProcess(app.getAppPath());
 
 	createWindow();
 
@@ -60,6 +64,10 @@ app.whenReady().then(() => {
 		// dock icon is clicked and there are no other windows open.
 		if (BrowserWindow.getAllWindows().length === 0) createWindow();
 	});
+});
+
+app.on('before-quit', () => {
+	stopPatProcess('before-quit');
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
