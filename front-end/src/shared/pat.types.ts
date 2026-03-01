@@ -11,6 +11,7 @@ export interface RMSStation {
 }
 
 export interface Bandwidths {
+	mode?: string;
 	bandwidths: string[];
 	default: string;
 }
@@ -26,13 +27,50 @@ export interface PatStatus {
 	config_hash: string;
 }
 
-// Determine what this represents
-export interface StationValue {
+export interface ConnectResult {
 	NumReceived: number;
 }
 
+export type StationValue = ConnectResult;
+
+export interface QsyPayload {
+	transport: string;
+	freq: number;
+}
+
+export interface DisconnectParams {
+	dirty?: boolean;
+}
+
+export interface GpsPosition {
+	Lat: number;
+	Lon: number;
+	Time: string;
+	Alt?: number;
+	Track?: number;
+	Speed?: number;
+	Mode?: number;
+	Device?: string;
+}
+
+export interface CoordsToLocatorPayload {
+	lat: number;
+	lon: number;
+}
+
+export interface CoordsToLocatorResponse {
+	locator: string;
+}
+
+export interface PositionReportPayload {
+	lat: number;
+	lon: number;
+	comment?: string;
+	date?: string | Date;
+}
+
 export interface PatClient {
-	getRMSList: (param: {
+	getRMSList: (params: {
 		mode?: string;
 		band?: string;
 		forceDownload?: boolean;
@@ -41,6 +79,10 @@ export interface PatClient {
 	getBandwidths: (mode: string) => Promise<Bandwidths>;
 	getConnectAliases: () => Promise<ConnectionAliases>;
 	getStatus: () => Promise<PatStatus>;
-	connectToStation: (rawUrl: string) => Promise<StationValue>;
-	sendQSY: (data: { transport: string; freq: number }) => Promise<void>;
+	connectToStation: (rawUrl: string) => Promise<ConnectResult>;
+	sendQSY: (data: QsyPayload) => Promise<void>;
+	disconnect: (params?: DisconnectParams) => Promise<void>;
+	getCurrentGpsPosition: () => Promise<GpsPosition>;
+	coordsToLocator: (data: CoordsToLocatorPayload) => Promise<CoordsToLocatorResponse>;
+	postPositionReport: (data: PositionReportPayload) => Promise<string>;
 }

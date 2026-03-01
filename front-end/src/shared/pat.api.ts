@@ -1,10 +1,16 @@
 import type {
-	RMSStation,
 	PatClient,
+	RMSStation,
 	Bandwidths,
 	ConnectionAliases,
-	StationValue,
-	PatStatus
+	ConnectResult,
+	PatStatus,
+	QsyPayload,
+	DisconnectParams,
+	GpsPosition,
+	CoordsToLocatorPayload,
+	CoordsToLocatorResponse,
+	PositionReportPayload
 } from './pat.types';
 import { httpClient } from './httpClient';
 
@@ -18,18 +24,16 @@ type RendererPatAPI = {
 	getBandwidths: (mode: string) => Promise<Bandwidths>;
 	getConnectAliases: () => Promise<ConnectionAliases>;
 	getStatus: () => Promise<PatStatus>;
-	connectToStation: (rawUrl: string) => Promise<StationValue>;
-	sendQsy: (data: { transport: string; freq: number }) => Promise<void>;
+	connectToStation: (rawUrl: string) => Promise<ConnectResult>;
+	sendQsy: (data: QsyPayload) => Promise<void>;
+	disconnect: (params?: DisconnectParams) => Promise<void>;
+	getCurrentGpsPosition: () => Promise<GpsPosition>;
+	coordsToLocator: (data: CoordsToLocatorPayload) => Promise<CoordsToLocatorResponse>;
+	postPositionReport: (data: PositionReportPayload) => Promise<string>;
 };
-
-type RendererGlobal = {
-	electron?: unknown;
-	api?: RendererPatAPI;
-};
-
 
 const isRenderer = typeof window !== 'undefined';
-const rendererGlobal = (isRenderer ? window : undefined) as RendererGlobal | undefined;
+const rendererGlobal = (isRenderer ? window : undefined) as Window | undefined;
 const isElectronRenderer = isRenderer && Boolean(rendererGlobal?.api);
 
 async function getRMSList(params: {
@@ -38,7 +42,13 @@ async function getRMSList(params: {
 	forceDownload?: boolean;
 	predict?: boolean;
 }) {
-	const resp = await httpClient.get<RMSStation[]>('/api/rmslist', { params });
+	const rmslistParams = {
+		mode: params.mode,
+		band: params.band,
+		predict: params.predict,
+		'force-download': params.forceDownload
+	};
+	const resp = await httpClient.get<RMSStation[]>('/api/rmslist', { params: rmslistParams });
 	return resp.data;
 }
 
@@ -57,14 +67,35 @@ async function getStatus(): Promise<PatStatus> {
 	return resp.data;
 }
 
-async function connectToStation(rawUrl: string) {
-	const url = encodeURIComponent(rawUrl);
-	const resp = await httpClient.get<StationValue>('/api/connect', { params: { url } });
+async function connectToStation(rawUrl: string): Promise<ConnectResult> {
+	const resp = await httpClient.get<ConnectResult>('/api/connect', { params: { url: rawUrl } });
 	return resp.data;
 }
 
-async function sendQSY(data: { transport: string; freq: number }) {
+async function sendQSY(data: QsyPayload): Promise<void> {
 	await httpClient.post('/api/qsy', data);
+}
+
+async function disconnect(params?: DisconnectParams): Promise<void> {
+	const queryParams = params?.dirty === undefined ? undefined : { dirty: params.dirty };
+	await httpClient.post('/api/disconnect', undefined, { params: queryParams });
+}
+
+async function getCurrentGpsPosition(): Promise<GpsPosition> {
+	const resp = await httpClient.get<GpsPosition>('/api/current_gps_position');
+	return resp.data;
+}
+
+async function coordsToLocator(data: CoordsToLocatorPayload): Promise<CoordsToLocatorResponse> {
+	const resp = await httpClient.post<CoordsToLocatorResponse>('/api/coords_to_locator', data);
+	return resp.data;
+}
+
+async function postPositionReport(data: PositionReportPayload): Promise<string> {
+	const resp = await httpClient.post<string>('/api/posreport', data, {
+		responseType: 'text'
+	});
+	return resp.data;
 }
 
 const httpPat: PatClient = {
@@ -73,7 +104,11 @@ const httpPat: PatClient = {
 	getConnectAliases,
 	getStatus,
 	connectToStation,
-	sendQSY
+	sendQSY,
+	disconnect,
+	getCurrentGpsPosition,
+	coordsToLocator,
+	postPositionReport
 };
 
 const ipcPat: PatClient = {
@@ -82,7 +117,11 @@ const ipcPat: PatClient = {
 	getConnectAliases: () => rendererGlobal!.api!.getConnectAliases(),
 	getStatus: () => rendererGlobal!.api!.getStatus(),
 	connectToStation: (rawUrl) => rendererGlobal!.api!.connectToStation(rawUrl),
-	sendQSY: (data) => rendererGlobal!.api!.sendQsy(data)
+	sendQSY: (data) => rendererGlobal!.api!.sendQSY(data),
+	disconnect: (params) => rendererGlobal!.api!.disconnect(params),
+	getCurrentGpsPosition: () => rendererGlobal!.api!.getCurrentGpsPosition(),
+	coordsToLocator: (data) => rendererGlobal!.api!.coordsToLocator(data),
+	postPositionReport: (data) => rendererGlobal!.api!.postPositionReport(data)
 };
 
 const pat: PatClient = isElectronRenderer ? ipcPat : httpPat;

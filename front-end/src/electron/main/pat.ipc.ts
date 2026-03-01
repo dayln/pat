@@ -3,6 +3,12 @@ import client from '../../shared/pat.api';
 import { ChildProcess, spawn } from 'child_process';
 import { join } from 'path';
 import { existsSync } from 'fs';
+import type {
+	CoordsToLocatorPayload,
+	DisconnectParams,
+	PositionReportPayload,
+	QsyPayload
+} from '../../shared/pat.types';
 
 let patProcess: ChildProcess | null = null;
 
@@ -76,7 +82,6 @@ export function stopPatProcess(reason: string): void {
 }
 
 export function setupIPChandlers() {
-
 	ipcMain.handle('pat:status', async () => {
 		const status = await client.getStatus();
 		console.log(`${logPrefix} status requested`, status);
@@ -109,7 +114,23 @@ export function setupIPChandlers() {
 		return client.connectToStation(rawUrl);
 	});
 
-	ipcMain.handle('pat:sendQsy', (_event, data: { transport: string; freq: number }) => {
+	ipcMain.handle('pat:sendQsy', (_event, data: QsyPayload) => {
 		return client.sendQSY(data);
+	});
+
+	ipcMain.handle('pat:disconnect', (_event, params?: DisconnectParams) => {
+		return client.disconnect(params);
+	});
+
+	ipcMain.handle('pat:getCurrentGpsPosition', () => {
+		return client.getCurrentGpsPosition();
+	});
+
+	ipcMain.handle('pat:coordsToLocator', (_event, data: CoordsToLocatorPayload) => {
+		return client.coordsToLocator(data);
+	});
+
+	ipcMain.handle('pat:postPositionReport', (_event, data: PositionReportPayload) => {
+		return client.postPositionReport(data);
 	});
 }
