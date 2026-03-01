@@ -18,11 +18,12 @@ export interface Bandwidths {
 export type ConnectionAliases = Record<string, string>;
 
 export interface PatStatus {
-	running: boolean;
-	pid: number | null;
-	exitCode: number | null;
-	killed: boolean;
-	startedAt: string | null;
+	active_listeners: string[];
+	connected: boolean;
+	dialing: boolean;
+	remote_addr: string;
+	http_clients: string[];
+	config_hash: string;
 }
 
 // Determine what this represents

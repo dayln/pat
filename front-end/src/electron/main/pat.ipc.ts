@@ -5,22 +5,11 @@ import { join } from 'path';
 import { existsSync } from 'fs';
 
 let patProcess: ChildProcess | null = null;
-let lastStartedAt: string | null = null;
 
 const logPrefix = '[pat:process]';
 
 function isPatRunning(): boolean {
 	return patProcess !== null && patProcess.exitCode === null && !patProcess.killed;
-}
-
-function getPatStatus() {
-	return {
-		running: isPatRunning(),
-		pid: patProcess?.pid ?? null,
-		exitCode: patProcess?.exitCode ?? null,
-		killed: patProcess?.killed ?? false,
-		startedAt: lastStartedAt
-	};
 }
 
 function attachPatLogging(child: ChildProcess): void {
@@ -68,7 +57,6 @@ export function startPatProcess(appPath: string): void {
 	});
 
 	patProcess = child;
-	lastStartedAt = new Date().toISOString();
 	attachPatLogging(child);
 }
 
@@ -89,8 +77,8 @@ export function stopPatProcess(reason: string): void {
 
 export function setupIPChandlers() {
 
-	ipcMain.handle('pat:status', () => {
-		const status = getPatStatus();
+	ipcMain.handle('pat:status', async () => {
+		const status = await client.getStatus();
 		console.log(`${logPrefix} status requested`, status);
 		return status;
 	});

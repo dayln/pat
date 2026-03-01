@@ -1,4 +1,3 @@
-import axios from 'axios';
 import type {
 	RMSStation,
 	PatClient,
@@ -7,6 +6,7 @@ import type {
 	StationValue,
 	PatStatus
 } from './pat.types';
+import { httpClient } from './httpClient';
 
 type RendererPatAPI = {
 	getRMSList: (params: {
@@ -27,17 +27,10 @@ type RendererGlobal = {
 	api?: RendererPatAPI;
 };
 
+
 const isRenderer = typeof window !== 'undefined';
-const rendererGlobal = (isRenderer ? globalThis : undefined) as RendererGlobal | undefined;
-const hasRendererApi = Boolean(rendererGlobal?.electron && rendererGlobal?.api);
-
-const nodeBaseURL =
-	typeof process !== 'undefined' && process.env?.PAT_API_BASE_URL
-		? process.env.PAT_API_BASE_URL
-		: 'http://127.0.0.1:8080';
-
-const baseURL = isRenderer ? undefined : nodeBaseURL;
-const httpClient = axios.create({ baseURL, headers: { 'Content-Type': 'application/json' } });
+const rendererGlobal = (isRenderer ? window : undefined) as RendererGlobal | undefined;
+const isElectronRenderer = isRenderer && Boolean(rendererGlobal?.api);
 
 async function getRMSList(params: {
 	mode?: string;
@@ -60,7 +53,8 @@ async function getConnectAliases() {
 }
 
 async function getStatus(): Promise<PatStatus> {
-	throw new Error('Pat status is only available in Electron mode.');
+	const resp = await httpClient.get<PatStatus>('/api/status');
+	return resp.data;
 }
 
 async function connectToStation(rawUrl: string) {
@@ -91,6 +85,6 @@ const ipcPat: PatClient = {
 	sendQSY: (data) => rendererGlobal!.api!.sendQsy(data)
 };
 
-const pat: PatClient = hasRendererApi ? ipcPat : httpPat;
+const pat: PatClient = isElectronRenderer ? ipcPat : httpPat;
 
 export default pat;

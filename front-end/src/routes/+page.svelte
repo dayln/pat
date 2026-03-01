@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import pat from '../shared/pat.api';
 	import type { ConnectionAliases, PatStatus, RMSStation } from '../shared/pat.types';
 
 	let aliases = $state<ConnectionAliases | null>(null);
@@ -23,7 +24,7 @@
 		errorMessage = '';
 
 		try {
-			aliases = await window.api.getConnectAliases();
+			aliases = await pat.getConnectAliases();
 			aliasEntries = Object.entries(aliases).sort(([a], [b]) => a.localeCompare(b));
 		} catch (error) {
 			aliases = null;
@@ -39,7 +40,7 @@
 		isStatusLoading = true;
 		statusErrorMessage = '';
 		try {
-			patStatus = await window.api.getStatus();
+			patStatus = await pat.getStatus();
 			statusCheckedAt = new Date().toLocaleString();
 			console.log('[pat:process] UI status refreshed', patStatus);
 		} catch (error) {
@@ -54,7 +55,7 @@
 		isRmsLoading = true;
 		rmsErrorMessage = '';
 		try {
-			rmsList = await window.api.getRMSList({
+			rmsList = await pat.getRMSList({
 				mode: rmsMode.trim() || undefined,
 				band: rmsBand.trim() || undefined,
 				forceDownload: rmsForceDownload || undefined,
@@ -95,7 +96,7 @@
 
 	<section class="panel" aria-label="Pat process status">
 		<div class="section-header">
-			<h2>Pat Process Status</h2>
+			<h2>Pat Status</h2>
 			<button type="button" class="primary-button" onclick={refreshStatus} disabled={isStatusLoading}>
 				{isStatusLoading ? 'Checking status...' : 'Refresh Status'}
 			</button>
@@ -105,24 +106,32 @@
 		{:else if patStatus}
 			<dl class="status-grid">
 				<div>
-					<dt>Running</dt>
-					<dd>{patStatus.running ? 'Yes' : 'No'}</dd>
+					<dt>Connected</dt>
+					<dd>{patStatus.connected ? 'Yes' : 'No'}</dd>
 				</div>
 				<div>
-					<dt>PID</dt>
-					<dd><code>{patStatus.pid ?? 'N/A'}</code></dd>
+					<dt>Dialing</dt>
+					<dd>{patStatus.dialing ? 'Yes' : 'No'}</dd>
 				</div>
 				<div>
-					<dt>Exit Code</dt>
-					<dd><code>{patStatus.exitCode ?? 'N/A'}</code></dd>
+					<dt>Remote Address</dt>
+					<dd><code>{patStatus.remote_addr || 'N/A'}</code></dd>
 				</div>
 				<div>
-					<dt>Killed</dt>
-					<dd>{patStatus.killed ? 'true' : 'false'}</dd>
+					<dt>Active Listeners</dt>
+					<dd><code>{patStatus.active_listeners.join(', ') || 'None'}</code></dd>
 				</div>
 				<div>
-					<dt>Started</dt>
-					<dd><code>{patStatus.startedAt ?? 'N/A'}</code></dd>
+					<dt>HTTP Clients</dt>
+					<dd><code>{patStatus.http_clients.length}</code></dd>
+				</div>
+				<div>
+					<dt>Config Hash</dt>
+					<dd>
+						<code class="truncated-hash" title={patStatus.config_hash || undefined}>
+							{patStatus.config_hash || 'N/A'}
+						</code>
+					</dd>
 				</div>
 			</dl>
 			{#if statusCheckedAt}
@@ -365,6 +374,15 @@
 		border: 1px solid #d8e5fb;
 		border-radius: 6px;
 		padding: 0.1rem 0.3rem;
+	}
+
+	.truncated-hash {
+		display: inline-block;
+		max-width: 16ch;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		vertical-align: bottom;
 	}
 
 	.alias-list {

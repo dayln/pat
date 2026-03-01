@@ -9,8 +9,8 @@ import type {
 
 declare global {
 	interface Window {
-		electron: ElectronAPI;
-		api: {
+		electron?: ElectronAPI;
+		api?: {
 			getRMSList: (params: {
 				mode?: string;
 				band?: string;
