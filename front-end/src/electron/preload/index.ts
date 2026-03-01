@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
 
 const api = {
+	start: (callSign: string) => ipcRenderer.invoke('pat:start', callSign),
 	getRMSList: (params: {
 		mode?: string;
 		band?: string;
@@ -10,6 +11,7 @@ const api = {
 	}) => ipcRenderer.invoke('pat:getRmsList', params),
 	getBandwidths: (mode: string) => ipcRenderer.invoke('pat:getBandwidths', mode),
 	getConnectAliases: () => ipcRenderer.invoke('pat:getConnectAliases'),
+	getStatus: () => ipcRenderer.invoke('pat:status'),
 	connectToStation: (rawUrl: string) => ipcRenderer.invoke('pat:connectToStation', rawUrl),
 	sendQsy: (data: { transport: string; freq: number }) => ipcRenderer.invoke('pat:sendQsy', data)
 };

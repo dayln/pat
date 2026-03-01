@@ -17,6 +17,15 @@ export interface Bandwidths {
 
 export type ConnectionAliases = Record<string, string>;
 
+export interface PatStatus {
+	running: boolean;
+	pid: number | null;
+	exitCode: number | null;
+	killed: boolean;
+	callSign: string | null;
+	startedAt: string | null;
+}
+
 // Determine what this represents
 export interface StationValue {
 	NumReceived: number;
@@ -31,6 +40,7 @@ export interface PatClient {
 	}) => Promise<RMSStation[]>;
 	getBandwidths: (mode: string) => Promise<Bandwidths>;
 	getConnectAliases: () => Promise<ConnectionAliases>;
+	getStatus: () => Promise<PatStatus>;
 	connectToStation: (rawUrl: string) => Promise<StationValue>;
 	sendQSY: (data: { transport: string; freq: number }) => Promise<void>;
 }
