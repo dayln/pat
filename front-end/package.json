@@ -6,6 +6,7 @@
 	"main": "./out/main/index.js",
 	"scripts": {
 		"dev": "vite dev",
+		"dev:pat": "concurrently './bin/pat http' 'vite dev'",
 		"build": "vite build",
 		"preview": "vite preview",
 		"electron:start": "electron-vite preview",
@@ -35,6 +36,7 @@
 		"@tailwindcss/vite": "^4.1.18",
 		"@types/node": "^24",
 		"@vitest/browser-playwright": "^4.0.18",
+		"concurrently": "^9.2.1",
 		"electron-vite": "^5.0.0",
 		"eslint": "^9.39.2",
 		"eslint-config-prettier": "^10.1.8",
