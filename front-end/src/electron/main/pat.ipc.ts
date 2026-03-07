@@ -11,7 +11,9 @@ import type {
 	PatConfig,
 	MailboxBox,
 	AttachmentRequestOptions,
-	OutboundMessagePayload
+	OutboundMessagePayload,
+	TemplateQueryOptions,
+	FormSubmissionPayload
 } from '../../shared/pat.types';
 
 let patProcess: ChildProcess | null = null;
@@ -211,4 +213,35 @@ export function setupIPChandlers() {
 	ipcMain.handle('pat:postOutboundMessage', (_event, payload: OutboundMessagePayload) => {
 		return client.postOutboundMessage(payload);
 	});
+
+	ipcMain.handle('pat:getFormsCatalog', () => {
+		return client.getFormsCatalog();
+	});
+
+	ipcMain.handle('pat:updateForms', () => {
+		return client.updateForms();
+	});
+
+	ipcMain.handle('pat:getTemplate', (_event, options: TemplateQueryOptions) => {
+		return client.getTemplate(options);
+	});
+
+	ipcMain.handle('pat:getFormData', () => {
+		return client.getFormData();
+	});
+
+	ipcMain.handle('pat:postFormData', (_event, payload: FormSubmissionPayload) => {
+		return client.postFormData(payload);
+	});
+
+	ipcMain.handle('pat:getFormTemplate', (_event, options: TemplateQueryOptions) => {
+		return client.getFormTemplate(options);
+	});
+
+	ipcMain.handle(
+		'pat:getFormAsset',
+		(_event, path: string, responseType?: 'text' | 'arraybuffer') => {
+			return client.getFormAsset(path, responseType);
+		}
+	);
 }

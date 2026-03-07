@@ -16,7 +16,12 @@ import type {
 	MessageSummary,
 	MessageDetail,
 	AttachmentRequestOptions,
-	OutboundMessagePayload
+	OutboundMessagePayload,
+	FormFolder,
+	FormsUpdateResponse,
+	TemplateQueryOptions,
+	FormMessage,
+	FormSubmissionPayload
 } from './pat.types';
 import { httpClient } from './httpClient';
 
@@ -220,6 +225,69 @@ async function postOutboundMessage(payload: OutboundMessagePayload): Promise<str
 	return resp.data;
 }
 
+async function getFormsCatalog(): Promise<FormFolder> {
+	const resp = await httpClient.get<FormFolder>('/api/formcatalog');
+	return resp.data;
+}
+
+async function updateForms(): Promise<FormsUpdateResponse> {
+	const resp = await httpClient.post<FormsUpdateResponse>('/api/formsUpdate');
+	return resp.data;
+}
+
+async function getTemplate(options: TemplateQueryOptions): Promise<string> {
+	const params: Record<string, string | undefined> = { template: options.template };
+	if (options.inReplyTo) params['in-reply-to'] = options.inReplyTo;
+	const resp = await httpClient.get<string>('/api/template', { params, responseType: 'text' });
+	return resp.data;
+}
+
+async function getFormData(): Promise<FormMessage> {
+	const resp = await httpClient.get<FormMessage>('/api/form');
+	return resp.data;
+}
+
+async function postFormData(payload: FormSubmissionPayload): Promise<string> {
+	const params: Record<string, string | undefined> = { template: payload.template };
+	if (payload.inReplyTo) params['in-reply-to'] = payload.inReplyTo;
+
+	if (payload.formValues) {
+		const formData = new FormData();
+		for (const [key, value] of Object.entries(payload.formValues)) {
+			formData.append(key, value);
+		}
+		const resp = await httpClient.post<string>('/api/form', formData, {
+			params,
+			headers: { 'Content-Type': 'multipart/form-data' },
+			responseType: 'text'
+		});
+		return resp.data;
+	} else {
+		const jsonPayload = { responses: payload.responses || {} };
+		const resp = await httpClient.post<string>('/api/form', jsonPayload, {
+			params,
+			headers: { 'Content-Type': 'application/json' },
+			responseType: 'text'
+		});
+		return resp.data;
+	}
+}
+
+async function getFormTemplate(options: TemplateQueryOptions): Promise<string> {
+	const params: Record<string, string | undefined> = { template: options.template };
+	if (options.inReplyTo) params['in-reply-to'] = options.inReplyTo;
+	const resp = await httpClient.get<string>('/api/forms', { params, responseType: 'text' });
+	return resp.data;
+}
+
+async function getFormAsset(
+	path: string,
+	responseType: 'text' | 'arraybuffer' = 'text'
+): Promise<string | ArrayBuffer> {
+	const resp = await httpClient.get<string | ArrayBuffer>(`/api/forms/${path}`, { responseType });
+	return resp.data;
+}
+
 const httpPat: PatClient = {
 	getRMSList,
 	getBandwidths,
@@ -244,7 +312,14 @@ const httpPat: PatClient = {
 	getAttachmentText,
 	setMailboxRead,
 	moveMessage,
-	postOutboundMessage
+	postOutboundMessage,
+	getFormsCatalog,
+	updateForms,
+	getTemplate,
+	getFormData,
+	postFormData,
+	getFormTemplate,
+	getFormAsset
 };
 
 const ipcPat: PatClient = {
@@ -273,7 +348,14 @@ const ipcPat: PatClient = {
 		rendererGlobal!.api!.getAttachmentText(box, mid, attachment, options),
 	setMailboxRead: (box, mid, read) => rendererGlobal!.api!.setMailboxRead(box, mid, read),
 	moveMessage: (box, mid) => rendererGlobal!.api!.moveMessage(box, mid),
-	postOutboundMessage: (payload) => rendererGlobal!.api!.postOutboundMessage(payload)
+	postOutboundMessage: (payload) => rendererGlobal!.api!.postOutboundMessage(payload),
+	getFormsCatalog: () => rendererGlobal!.api!.getFormsCatalog(),
+	updateForms: () => rendererGlobal!.api!.updateForms(),
+	getTemplate: (options) => rendererGlobal!.api!.getTemplate(options),
+	getFormData: () => rendererGlobal!.api!.getFormData(),
+	postFormData: (payload) => rendererGlobal!.api!.postFormData(payload),
+	getFormTemplate: (options) => rendererGlobal!.api!.getFormTemplate(options),
+	getFormAsset: (path, responseType) => rendererGlobal!.api!.getFormAsset(path, responseType)
 };
 
 const pat: PatClient = isElectronRenderer ? ipcPat : httpPat;

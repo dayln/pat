@@ -8,7 +8,9 @@ import type {
 	PatConfig,
 	MailboxBox,
 	AttachmentRequestOptions,
-	OutboundMessagePayload
+	OutboundMessagePayload,
+	TemplateQueryOptions,
+	FormSubmissionPayload
 } from '../../shared/pat.types';
 
 const api = {
@@ -55,7 +57,16 @@ const api = {
 		ipcRenderer.invoke('pat:setMailboxRead', box, mid, read),
 	moveMessage: (box: MailboxBox, mid: string) => ipcRenderer.invoke('pat:moveMessage', box, mid),
 	postOutboundMessage: (payload: OutboundMessagePayload) =>
-		ipcRenderer.invoke('pat:postOutboundMessage', payload)
+		ipcRenderer.invoke('pat:postOutboundMessage', payload),
+	getFormsCatalog: () => ipcRenderer.invoke('pat:getFormsCatalog'),
+	updateForms: () => ipcRenderer.invoke('pat:updateForms'),
+	getTemplate: (options: TemplateQueryOptions) => ipcRenderer.invoke('pat:getTemplate', options),
+	getFormData: () => ipcRenderer.invoke('pat:getFormData'),
+	postFormData: (payload: FormSubmissionPayload) => ipcRenderer.invoke('pat:postFormData', payload),
+	getFormTemplate: (options: TemplateQueryOptions) =>
+		ipcRenderer.invoke('pat:getFormTemplate', options),
+	getFormAsset: (path: string, responseType?: 'text' | 'arraybuffer') =>
+		ipcRenderer.invoke('pat:getFormAsset', path, responseType)
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

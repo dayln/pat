@@ -243,6 +243,44 @@ export interface OutboundMessagePayload {
 	files?: SerializedUploadFile[];
 }
 
+export interface FormTemplate {
+	name: string;
+	template_path: string;
+}
+
+export interface FormFolder {
+	name: string;
+	path: string;
+	version: string;
+	form_count: number;
+	forms: FormTemplate[];
+	folders: FormFolder[];
+}
+
+export interface FormsUpdateResponse {
+	newestVersion: string;
+	action: string;
+}
+
+export interface FormMessage {
+	msg_to: string;
+	msg_cc: string;
+	msg_subject: string;
+	msg_body: string;
+}
+
+export interface TemplateQueryOptions {
+	template: string;
+	inReplyTo?: string;
+}
+
+export interface FormSubmissionPayload {
+	template: string;
+	inReplyTo?: string;
+	formValues?: Record<string, string>;
+	responses?: Record<string, string>;
+}
+
 export interface PatClient {
 	getRMSList: (params: {
 		mode?: string;
@@ -283,4 +321,14 @@ export interface PatClient {
 	setMailboxRead: (box: MailboxBox, mid: string, read: boolean) => Promise<void>;
 	moveMessage: (box: MailboxBox, mid: string) => Promise<void>;
 	postOutboundMessage: (payload: OutboundMessagePayload) => Promise<string>;
+	getFormsCatalog: () => Promise<FormFolder>;
+	updateForms: () => Promise<FormsUpdateResponse>;
+	getTemplate: (options: TemplateQueryOptions) => Promise<string>;
+	getFormData: () => Promise<FormMessage>;
+	postFormData: (payload: FormSubmissionPayload) => Promise<string>;
+	getFormTemplate: (options: TemplateQueryOptions) => Promise<string>;
+	getFormAsset: (
+		path: string,
+		responseType?: 'text' | 'arraybuffer'
+	) => Promise<string | ArrayBuffer>;
 }

@@ -177,7 +177,14 @@ describe('pat client selection', () => {
 				getAttachmentText: vi.fn(),
 				setMailboxRead: vi.fn(),
 				moveMessage: vi.fn(),
-				postOutboundMessage: vi.fn()
+				postOutboundMessage: vi.fn(),
+				getFormsCatalog: vi.fn(),
+				updateForms: vi.fn(),
+				getTemplate: vi.fn(),
+				getFormData: vi.fn(),
+				postFormData: vi.fn(),
+				getFormTemplate: vi.fn(),
+				getFormAsset: vi.fn()
 			}
 		});
 
@@ -217,7 +224,14 @@ describe('pat client selection', () => {
 				getAttachmentText: vi.fn(),
 				setMailboxRead: vi.fn(),
 				moveMessage: vi.fn(),
-				postOutboundMessage: vi.fn()
+				postOutboundMessage: vi.fn(),
+				getFormsCatalog: vi.fn(),
+				updateForms: vi.fn(),
+				getTemplate: vi.fn(),
+				getFormData: vi.fn(),
+				postFormData: vi.fn(),
+				getFormTemplate: vi.fn(),
+				getFormAsset: vi.fn()
 			}
 		});
 
@@ -489,6 +503,153 @@ describe('pat client selection', () => {
 
 				expect(httpPostMock).toHaveBeenCalled();
 			});
+		});
+	});
+
+	describe('forms endpoints', () => {
+		it('routes getFormsCatalog to the formcatalog endpoint', async () => {
+			vi.stubGlobal('window', {});
+			const catalog = {
+				name: 'Standard Forms',
+				path: '/forms',
+				version: '1.0',
+				form_count: 5,
+				forms: [],
+				folders: []
+			};
+			httpGetMock.mockResolvedValue({ data: catalog });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getFormsCatalog();
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/formcatalog');
+			expect(result).toEqual(catalog);
+		});
+
+		it('routes updateForms to the formsUpdate endpoint', async () => {
+			vi.stubGlobal('window', {});
+			const response = { newestVersion: '1.1', action: 'update' };
+			httpPostMock.mockResolvedValue({ data: response });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.updateForms();
+
+			expect(httpPostMock).toHaveBeenCalledWith('/api/formsUpdate');
+			expect(result).toEqual(response);
+		});
+
+		it('routes getTemplate with query params', async () => {
+			vi.stubGlobal('window', {});
+			httpGetMock.mockResolvedValue({ data: 'template content' });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getTemplate({ template: 'forms/test.txt', inReplyTo: 'msg1' });
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/template', {
+				params: { template: 'forms/test.txt', 'in-reply-to': 'msg1' },
+				responseType: 'text'
+			});
+			expect(result).toBe('template content');
+		});
+
+		it('routes getFormData to the form endpoint', async () => {
+			vi.stubGlobal('window', {});
+			const formMessage = {
+				msg_to: 'test@test.com',
+				msg_cc: '',
+				msg_subject: 'Test',
+				msg_body: 'Hello'
+			};
+			httpGetMock.mockResolvedValue({ data: formMessage });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getFormData();
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/form');
+			expect(result).toEqual(formMessage);
+		});
+
+		describe('postFormData', () => {
+			beforeEach(() => {
+				vi.stubGlobal('window', {});
+				vi.stubGlobal('FormData', FormData);
+			});
+
+			it('posts form data with formValues (multipart)', async () => {
+				httpPostMock.mockResolvedValue({ data: '<script>window.close()</script>' });
+
+				const { default: pat } = await import('./pat.api');
+				const result = await pat.postFormData({
+					template: 'forms/test.txt',
+					formValues: { field1: 'value1', field2: 'value2' }
+				});
+
+				expect(httpPostMock).toHaveBeenCalled();
+				const [url, , config] = httpPostMock.mock.calls[0];
+				expect(url).toBe('/api/form');
+				expect(config.params).toEqual({ template: 'forms/test.txt' });
+				expect(config.headers).toEqual({ 'Content-Type': 'multipart/form-data' });
+				expect(result).toBe('<script>window.close()</script>');
+			});
+
+			it('posts form data with responses (JSON)', async () => {
+				httpPostMock.mockResolvedValue({ data: '<script>window.close()</script>' });
+
+				const { default: pat } = await import('./pat.api');
+				await pat.postFormData({
+					template: 'forms/test.txt',
+					inReplyTo: 'msg1',
+					responses: { prompt1: 'answer1' }
+				});
+
+				expect(httpPostMock).toHaveBeenCalled();
+				const [url, payload, config] = httpPostMock.mock.calls[0];
+				expect(url).toBe('/api/form');
+				expect(config.params).toEqual({ template: 'forms/test.txt', 'in-reply-to': 'msg1' });
+				expect(config.headers).toEqual({ 'Content-Type': 'application/json' });
+				expect(payload).toEqual({ responses: { prompt1: 'answer1' } });
+			});
+		});
+
+		it('routes getFormTemplate with query params', async () => {
+			vi.stubGlobal('window', {});
+			httpGetMock.mockResolvedValue({ data: '<html><body>Form</body></html>' });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getFormTemplate({ template: 'forms/test.txt' });
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/forms', {
+				params: { template: 'forms/test.txt' },
+				responseType: 'text'
+			});
+			expect(result).toBe('<html><body>Form</body></html>');
+		});
+
+		it('routes getFormAsset with text response by default', async () => {
+			vi.stubGlobal('window', {});
+			httpGetMock.mockResolvedValue({ data: 'asset content' });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getFormAsset('styles/main.css');
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/forms/styles/main.css', {
+				responseType: 'text'
+			});
+			expect(result).toBe('asset content');
+		});
+
+		it('routes getFormAsset with arraybuffer response', async () => {
+			vi.stubGlobal('window', {});
+			const buffer = new ArrayBuffer(8);
+			httpGetMock.mockResolvedValue({ data: buffer });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getFormAsset('images/logo.png', 'arraybuffer');
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/forms/images/logo.png', {
+				responseType: 'arraybuffer'
+			});
+			expect(result).toBe(buffer);
 		});
 	});
 });
