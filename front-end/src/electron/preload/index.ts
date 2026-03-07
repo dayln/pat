@@ -4,7 +4,8 @@ import type {
 	CoordsToLocatorPayload,
 	DisconnectParams,
 	PositionReportPayload,
-	QsyPayload
+	QsyPayload,
+	PatConfig
 } from '../../shared/pat.types';
 
 const api = {
@@ -24,7 +25,13 @@ const api = {
 	coordsToLocator: (data: CoordsToLocatorPayload) =>
 		ipcRenderer.invoke('pat:coordsToLocator', data),
 	postPositionReport: (data: PositionReportPayload) =>
-		ipcRenderer.invoke('pat:postPositionReport', data)
+		ipcRenderer.invoke('pat:postPositionReport', data),
+	getConfig: () => ipcRenderer.invoke('pat:getConfig'),
+	updateConfig: (config: PatConfig) => ipcRenderer.invoke('pat:updateConfig', config),
+	getAlias: (alias: string) => ipcRenderer.invoke('pat:getAlias', alias),
+	setAlias: (alias: string, value: string) => ipcRenderer.invoke('pat:setAlias', alias, value),
+	deleteAlias: (alias: string) => ipcRenderer.invoke('pat:deleteAlias', alias),
+	reload: () => ipcRenderer.invoke('pat:reload')
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

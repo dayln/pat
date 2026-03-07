@@ -1,17 +1,21 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PatStatus } from './pat.types';
 
-const { httpGetMock, httpPostMock } = vi.hoisted(() => {
+const { httpGetMock, httpPostMock, httpPutMock, httpDeleteMock } = vi.hoisted(() => {
 	return {
 		httpGetMock: vi.fn(),
-		httpPostMock: vi.fn()
+		httpPostMock: vi.fn(),
+		httpPutMock: vi.fn(),
+		httpDeleteMock: vi.fn()
 	};
 });
 
 vi.mock('./httpClient', () => ({
 	httpClient: {
 		get: httpGetMock,
-		post: httpPostMock
+		post: httpPostMock,
+		put: httpPutMock,
+		delete: httpDeleteMock
 	}
 }));
 
@@ -159,7 +163,13 @@ describe('pat client selection', () => {
 				disconnect: vi.fn(),
 				getCurrentGpsPosition: vi.fn(),
 				coordsToLocator: vi.fn(),
-				postPositionReport: vi.fn()
+				postPositionReport: vi.fn(),
+				getConfig: vi.fn(),
+				updateConfig: vi.fn(),
+				getAlias: vi.fn(),
+				setAlias: vi.fn(),
+				deleteAlias: vi.fn(),
+				reload: vi.fn()
 			}
 		});
 
@@ -185,7 +195,13 @@ describe('pat client selection', () => {
 				disconnect: vi.fn(),
 				getCurrentGpsPosition: ipcGetCurrentGpsPosition,
 				coordsToLocator: vi.fn(),
-				postPositionReport: vi.fn()
+				postPositionReport: vi.fn(),
+				getConfig: vi.fn(),
+				updateConfig: vi.fn(),
+				getAlias: vi.fn(),
+				setAlias: vi.fn(),
+				deleteAlias: vi.fn(),
+				reload: vi.fn()
 			}
 		});
 
@@ -195,5 +211,89 @@ describe('pat client selection', () => {
 		expect(ipcGetCurrentGpsPosition).toHaveBeenCalledTimes(1);
 		expect(httpGetMock).not.toHaveBeenCalled();
 		expect(result).toEqual(gps);
+	});
+
+	describe('config endpoints', () => {
+		it('routes getConfig to the config endpoint', async () => {
+			vi.stubGlobal('window', {});
+			const config = { mycall: 'W1ABC', locator: 'EN50aa' };
+			httpGetMock.mockResolvedValue({ data: config });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getConfig();
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/config');
+			expect(result).toEqual(config);
+		});
+
+		it('routes updateConfig to the config endpoint with PUT', async () => {
+			vi.stubGlobal('window', {});
+			httpPutMock.mockResolvedValue({ data: 'OK' });
+			const config = { mycall: 'W1ABC', locator: 'EN50ab' };
+
+			const { default: pat } = await import('./pat.api');
+			await pat.updateConfig(config);
+
+			expect(httpPutMock).toHaveBeenCalledWith('/api/config', config);
+		});
+	});
+
+	describe('alias endpoints', () => {
+		it('routes getAlias to the alias endpoint with encoded path', async () => {
+			vi.stubGlobal('window', {});
+			httpGetMock.mockResolvedValue({ data: 'ardop:///K1ABC?freq=14105.5' });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getAlias('LA1B-10');
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/config/connect_aliases/LA1B-10');
+			expect(result).toBe('ardop:///K1ABC?freq=14105.5');
+		});
+
+		it('encodes special characters in alias name', async () => {
+			vi.stubGlobal('window', {});
+			httpGetMock.mockResolvedValue({ data: 'telnet://example.com' });
+
+			const { default: pat } = await import('./pat.api');
+			await pat.getAlias('TEST/ALIAS');
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/config/connect_aliases/TEST%2FALIAS');
+		});
+
+		it('routes setAlias to the alias endpoint with PUT', async () => {
+			vi.stubGlobal('window', {});
+			httpPutMock.mockResolvedValue({ data: 'telnet://example.com:8772' });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.setAlias('MYTELNET', 'telnet://example.com:8772');
+
+			expect(httpPutMock).toHaveBeenCalledWith(
+				'/api/config/connect_aliases/MYTELNET',
+				'telnet://example.com:8772'
+			);
+			expect(result).toBe('telnet://example.com:8772');
+		});
+
+		it('routes deleteAlias to the alias endpoint with DELETE', async () => {
+			vi.stubGlobal('window', {});
+			httpDeleteMock.mockResolvedValue({ status: 204 });
+
+			const { default: pat } = await import('./pat.api');
+			await pat.deleteAlias('OLDALIAS');
+
+			expect(httpDeleteMock).toHaveBeenCalledWith('/api/config/connect_aliases/OLDALIAS');
+		});
+	});
+
+	describe('reload endpoint', () => {
+		it('routes reload to the reload endpoint', async () => {
+			vi.stubGlobal('window', {});
+			httpPostMock.mockResolvedValue({ status: 200 });
+
+			const { default: pat } = await import('./pat.api');
+			await pat.reload();
+
+			expect(httpPostMock).toHaveBeenCalledWith('/api/reload');
+		});
 	});
 });

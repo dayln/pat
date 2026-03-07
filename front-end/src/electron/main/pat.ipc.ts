@@ -7,7 +7,8 @@ import type {
 	CoordsToLocatorPayload,
 	DisconnectParams,
 	PositionReportPayload,
-	QsyPayload
+	QsyPayload,
+	PatConfig
 } from '../../shared/pat.types';
 
 let patProcess: ChildProcess | null = null;
@@ -132,5 +133,29 @@ export function setupIPChandlers() {
 
 	ipcMain.handle('pat:postPositionReport', (_event, data: PositionReportPayload) => {
 		return client.postPositionReport(data);
+	});
+
+	ipcMain.handle('pat:getConfig', () => {
+		return client.getConfig();
+	});
+
+	ipcMain.handle('pat:updateConfig', (_event, config: PatConfig) => {
+		return client.updateConfig(config);
+	});
+
+	ipcMain.handle('pat:getAlias', (_event, alias: string) => {
+		return client.getAlias(alias);
+	});
+
+	ipcMain.handle('pat:setAlias', (_event, alias: string, value: string) => {
+		return client.setAlias(alias, value);
+	});
+
+	ipcMain.handle('pat:deleteAlias', (_event, alias: string) => {
+		return client.deleteAlias(alias);
+	});
+
+	ipcMain.handle('pat:reload', () => {
+		return client.reload();
 	});
 }
