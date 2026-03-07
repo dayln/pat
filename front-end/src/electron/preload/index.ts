@@ -5,7 +5,10 @@ import type {
 	DisconnectParams,
 	PositionReportPayload,
 	QsyPayload,
-	PatConfig
+	PatConfig,
+	MailboxBox,
+	AttachmentRequestOptions,
+	OutboundMessagePayload
 } from '../../shared/pat.types';
 
 const api = {
@@ -31,7 +34,28 @@ const api = {
 	getAlias: (alias: string) => ipcRenderer.invoke('pat:getAlias', alias),
 	setAlias: (alias: string, value: string) => ipcRenderer.invoke('pat:setAlias', alias, value),
 	deleteAlias: (alias: string) => ipcRenderer.invoke('pat:deleteAlias', alias),
-	reload: () => ipcRenderer.invoke('pat:reload')
+	reload: () => ipcRenderer.invoke('pat:reload'),
+	getMailbox: (box: MailboxBox) => ipcRenderer.invoke('pat:getMailbox', box),
+	getMessage: (box: MailboxBox, mid: string) => ipcRenderer.invoke('pat:getMessage', box, mid),
+	deleteMessage: (box: MailboxBox, mid: string) =>
+		ipcRenderer.invoke('pat:deleteMessage', box, mid),
+	getAttachment: (
+		box: MailboxBox,
+		mid: string,
+		attachment: string,
+		options?: AttachmentRequestOptions
+	) => ipcRenderer.invoke('pat:getAttachment', box, mid, attachment, options),
+	getAttachmentText: (
+		box: MailboxBox,
+		mid: string,
+		attachment: string,
+		options?: AttachmentRequestOptions
+	) => ipcRenderer.invoke('pat:getAttachmentText', box, mid, attachment, options),
+	setMailboxRead: (box: MailboxBox, mid: string, read: boolean) =>
+		ipcRenderer.invoke('pat:setMailboxRead', box, mid, read),
+	moveMessage: (box: MailboxBox, mid: string) => ipcRenderer.invoke('pat:moveMessage', box, mid),
+	postOutboundMessage: (payload: OutboundMessagePayload) =>
+		ipcRenderer.invoke('pat:postOutboundMessage', payload)
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

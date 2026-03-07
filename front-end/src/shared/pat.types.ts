@@ -187,6 +187,62 @@ export interface AliasPayload {
 	value: string;
 }
 
+export type MailboxBox = 'in' | 'out' | 'sent' | 'archive';
+
+export interface MessageAddress {
+	Addr: string;
+	Name?: string;
+}
+
+export interface MessageFile {
+	Name: string;
+	Size: number;
+	Data?: number[];
+}
+
+export interface MessageSummary {
+	MID: string;
+	Date: string;
+	From: MessageAddress;
+	To: MessageAddress[];
+	Cc: MessageAddress[];
+	Subject: string;
+	Files: MessageFile[];
+	P2POnly: boolean;
+	Unread: boolean;
+}
+
+export interface MessageDetail extends MessageSummary {
+	Body: string;
+	BodyHTML: string;
+}
+
+export interface AttachmentRequestOptions {
+	inReplyTo?: string;
+	renderToHtml?: boolean;
+}
+
+export interface MoveMessagePayload {
+	sourcePath: string;
+}
+
+export interface SerializedUploadFile {
+	name: string;
+	mimeType?: string;
+	base64: string;
+	fieldName?: string;
+}
+
+export interface OutboundMessagePayload {
+	to?: string;
+	cc?: string;
+	subject: string;
+	body?: string;
+	p2pOnly?: boolean;
+	date: string;
+	files?: SerializedUploadFile[];
+}
+
 export interface PatClient {
 	getRMSList: (params: {
 		mode?: string;
@@ -209,4 +265,22 @@ export interface PatClient {
 	setAlias: (alias: string, value: string) => Promise<string>;
 	deleteAlias: (alias: string) => Promise<void>;
 	reload: () => Promise<void>;
+	getMailbox: (box: MailboxBox) => Promise<MessageSummary[]>;
+	getMessage: (box: MailboxBox, mid: string) => Promise<MessageDetail>;
+	deleteMessage: (box: MailboxBox, mid: string) => Promise<void>;
+	getAttachment: (
+		box: MailboxBox,
+		mid: string,
+		attachment: string,
+		options?: AttachmentRequestOptions
+	) => Promise<ArrayBuffer>;
+	getAttachmentText: (
+		box: MailboxBox,
+		mid: string,
+		attachment: string,
+		options?: AttachmentRequestOptions
+	) => Promise<string>;
+	setMailboxRead: (box: MailboxBox, mid: string, read: boolean) => Promise<void>;
+	moveMessage: (box: MailboxBox, mid: string) => Promise<void>;
+	postOutboundMessage: (payload: OutboundMessagePayload) => Promise<string>;
 }

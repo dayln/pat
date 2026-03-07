@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PatStatus } from './pat.types';
 
 const { httpGetMock, httpPostMock, httpPutMock, httpDeleteMock } = vi.hoisted(() => {
@@ -169,7 +169,15 @@ describe('pat client selection', () => {
 				getAlias: vi.fn(),
 				setAlias: vi.fn(),
 				deleteAlias: vi.fn(),
-				reload: vi.fn()
+				reload: vi.fn(),
+				getMailbox: vi.fn(),
+				getMessage: vi.fn(),
+				deleteMessage: vi.fn(),
+				getAttachment: vi.fn(),
+				getAttachmentText: vi.fn(),
+				setMailboxRead: vi.fn(),
+				moveMessage: vi.fn(),
+				postOutboundMessage: vi.fn()
 			}
 		});
 
@@ -201,7 +209,15 @@ describe('pat client selection', () => {
 				getAlias: vi.fn(),
 				setAlias: vi.fn(),
 				deleteAlias: vi.fn(),
-				reload: vi.fn()
+				reload: vi.fn(),
+				getMailbox: vi.fn(),
+				getMessage: vi.fn(),
+				deleteMessage: vi.fn(),
+				getAttachment: vi.fn(),
+				getAttachmentText: vi.fn(),
+				setMailboxRead: vi.fn(),
+				moveMessage: vi.fn(),
+				postOutboundMessage: vi.fn()
 			}
 		});
 
@@ -294,6 +310,185 @@ describe('pat client selection', () => {
 			await pat.reload();
 
 			expect(httpPostMock).toHaveBeenCalledWith('/api/reload');
+		});
+	});
+
+	describe('mailbox endpoints', () => {
+		it('routes getMailbox to the mailbox endpoint', async () => {
+			vi.stubGlobal('window', {});
+			const messages = [{ MID: 'msg1', Subject: 'Test' }];
+			httpGetMock.mockResolvedValue({ data: messages });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getMailbox('in');
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/mailbox/in');
+			expect(result).toEqual(messages);
+		});
+
+		it('routes getMessage to the message detail endpoint', async () => {
+			vi.stubGlobal('window', {});
+			const message = { MID: 'msg1', Subject: 'Test', Body: 'Hello' };
+			httpGetMock.mockResolvedValue({ data: message });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getMessage('in', 'msg1');
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/mailbox/in/msg1');
+			expect(result).toEqual(message);
+		});
+
+		it('routes deleteMessage to the message delete endpoint', async () => {
+			vi.stubGlobal('window', {});
+			httpDeleteMock.mockResolvedValue({ status: 200 });
+
+			const { default: pat } = await import('./pat.api');
+			await pat.deleteMessage('in', 'msg1');
+
+			expect(httpDeleteMock).toHaveBeenCalledWith('/api/mailbox/in/msg1');
+		});
+
+		it('routes getAttachment with arraybuffer response', async () => {
+			vi.stubGlobal('window', {});
+			const buffer = new ArrayBuffer(8);
+			httpGetMock.mockResolvedValue({ data: buffer });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getAttachment('in', 'msg1', 'file.txt');
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/mailbox/in/msg1/file.txt', {
+				params: {},
+				responseType: 'arraybuffer'
+			});
+			expect(result).toBe(buffer);
+		});
+
+		it('routes getAttachment with query params', async () => {
+			vi.stubGlobal('window', {});
+			const buffer = new ArrayBuffer(8);
+			httpGetMock.mockResolvedValue({ data: buffer });
+
+			const { default: pat } = await import('./pat.api');
+			await pat.getAttachment('in', 'msg1', 'file.txt', {
+				inReplyTo: 'msg0',
+				renderToHtml: true
+			});
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/mailbox/in/msg1/file.txt', {
+				params: { 'in-reply-to': 'msg0', rendertohtml: true },
+				responseType: 'arraybuffer'
+			});
+		});
+
+		it('routes getAttachmentText with text response', async () => {
+			vi.stubGlobal('window', {});
+			httpGetMock.mockResolvedValue({ data: 'file content' });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getAttachmentText('in', 'msg1', 'file.txt');
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/mailbox/in/msg1/file.txt', {
+				params: {},
+				responseType: 'text'
+			});
+			expect(result).toBe('file content');
+		});
+
+		it('encodes special characters in attachment name', async () => {
+			vi.stubGlobal('window', {});
+			httpGetMock.mockResolvedValue({ data: new ArrayBuffer(0) });
+
+			const { default: pat } = await import('./pat.api');
+			await pat.getAttachment('in', 'msg1', 'file name.txt');
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/mailbox/in/msg1/file%20name.txt', {
+				params: {},
+				responseType: 'arraybuffer'
+			});
+		});
+
+		it('routes setMailboxRead to the read endpoint', async () => {
+			vi.stubGlobal('window', {});
+			httpPostMock.mockResolvedValue({ status: 200 });
+
+			const { default: pat } = await import('./pat.api');
+			await pat.setMailboxRead('in', 'msg1', true);
+
+			expect(httpPostMock).toHaveBeenCalledWith('/api/mailbox/in/msg1/read', { Read: true });
+		});
+
+		it('routes moveMessage with X-Pat-SourcePath header', async () => {
+			vi.stubGlobal('window', {});
+			httpPostMock.mockResolvedValue({ status: 200 });
+
+			const { default: pat } = await import('./pat.api');
+			await pat.moveMessage('archive', 'msg1');
+
+			expect(httpPostMock).toHaveBeenCalledWith('/api/mailbox/archive', null, {
+				headers: { 'X-Pat-SourcePath': '/api/mailbox/archive/msg1' }
+			});
+		});
+
+		describe('postOutboundMessage', () => {
+			beforeEach(() => {
+				vi.stubGlobal('window', {});
+				vi.stubGlobal('FormData', FormData);
+				vi.stubGlobal('atob', (str: string) => {
+					return Buffer.from(str, 'base64').toString('binary');
+				});
+			});
+
+			it('posts outbound message with FormData', async () => {
+				httpPostMock.mockResolvedValue({ data: 'Message posted' });
+
+				const { default: pat } = await import('./pat.api');
+				const result = await pat.postOutboundMessage({
+					to: 'test@example.com',
+					subject: 'Test',
+					body: 'Hello',
+					date: '2026-03-07T12:00:00Z'
+				});
+
+				expect(httpPostMock).toHaveBeenCalled();
+				const [url, formData, config] = httpPostMock.mock.calls[0];
+				expect(url).toBe('/api/mailbox/out');
+				expect(formData).toBeInstanceOf(FormData);
+				expect(config.headers).toEqual({ 'Content-Type': 'multipart/form-data' });
+				expect(config.responseType).toBe('text');
+				expect(result).toBe('Message posted');
+			});
+
+			it('includes files in outbound message', async () => {
+				httpPostMock.mockResolvedValue({ data: 'Message posted' });
+
+				const { default: pat } = await import('./pat.api');
+				await pat.postOutboundMessage({
+					subject: 'Test',
+					date: '2026-03-07T12:00:00Z',
+					files: [
+						{
+							name: 'test.txt',
+							mimeType: 'text/plain',
+							base64: 'SGVsbG8gV29ybGQ='
+						}
+					]
+				});
+
+				expect(httpPostMock).toHaveBeenCalled();
+			});
+
+			it('sets p2pOnly flag', async () => {
+				httpPostMock.mockResolvedValue({ data: 'Message posted' });
+
+				const { default: pat } = await import('./pat.api');
+				await pat.postOutboundMessage({
+					subject: 'Test',
+					date: '2026-03-07T12:00:00Z',
+					p2pOnly: true
+				});
+
+				expect(httpPostMock).toHaveBeenCalled();
+			});
 		});
 	});
 });

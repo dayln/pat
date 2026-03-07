@@ -11,7 +11,12 @@ import type {
 	CoordsToLocatorPayload,
 	CoordsToLocatorResponse,
 	PositionReportPayload,
-	PatConfig
+	PatConfig,
+	MailboxBox,
+	MessageSummary,
+	MessageDetail,
+	AttachmentRequestOptions,
+	OutboundMessagePayload
 } from './pat.types';
 import { httpClient } from './httpClient';
 
@@ -117,6 +122,104 @@ async function reload(): Promise<void> {
 	await httpClient.post('/api/reload');
 }
 
+async function getMailbox(box: MailboxBox): Promise<MessageSummary[]> {
+	const resp = await httpClient.get<MessageSummary[]>(`/api/mailbox/${box}`);
+	return resp.data;
+}
+
+async function getMessage(box: MailboxBox, mid: string): Promise<MessageDetail> {
+	const resp = await httpClient.get<MessageDetail>(`/api/mailbox/${box}/${mid}`);
+	return resp.data;
+}
+
+async function deleteMessage(box: MailboxBox, mid: string): Promise<void> {
+	await httpClient.delete(`/api/mailbox/${box}/${mid}`);
+}
+
+async function getAttachment(
+	box: MailboxBox,
+	mid: string,
+	attachment: string,
+	options?: AttachmentRequestOptions
+): Promise<ArrayBuffer> {
+	const params: Record<string, string | boolean | undefined> = {};
+	if (options?.inReplyTo) params['in-reply-to'] = options.inReplyTo;
+	if (options?.renderToHtml) params.rendertohtml = options.renderToHtml;
+
+	const resp = await httpClient.get(
+		`/api/mailbox/${box}/${mid}/${encodeURIComponent(attachment)}`,
+		{
+			params,
+			responseType: 'arraybuffer'
+		}
+	);
+	return resp.data;
+}
+
+async function getAttachmentText(
+	box: MailboxBox,
+	mid: string,
+	attachment: string,
+	options?: AttachmentRequestOptions
+): Promise<string> {
+	const params: Record<string, string | boolean | undefined> = {};
+	if (options?.inReplyTo) params['in-reply-to'] = options.inReplyTo;
+	if (options?.renderToHtml) params.rendertohtml = options.renderToHtml;
+
+	const resp = await httpClient.get(
+		`/api/mailbox/${box}/${mid}/${encodeURIComponent(attachment)}`,
+		{
+			params,
+			responseType: 'text'
+		}
+	);
+	return resp.data;
+}
+
+async function setMailboxRead(box: MailboxBox, mid: string, read: boolean): Promise<void> {
+	await httpClient.post(`/api/mailbox/${box}/${mid}/read`, { Read: read });
+}
+
+async function moveMessage(box: MailboxBox, mid: string): Promise<void> {
+	await httpClient.post(`/api/mailbox/${box}`, null, {
+		headers: { 'X-Pat-SourcePath': `/api/mailbox/${box}/${mid}` }
+	});
+}
+
+function buildFormData(payload: OutboundMessagePayload): FormData {
+	const formData = new FormData();
+	if (payload.to) formData.append('to', payload.to);
+	if (payload.cc) formData.append('cc', payload.cc);
+	formData.append('subject', payload.subject);
+	if (payload.body) formData.append('body', payload.body);
+	if (payload.p2pOnly) formData.append('p2ponly', 'true');
+	formData.append('date', payload.date);
+
+	if (payload.files && payload.files.length > 0) {
+		for (const file of payload.files) {
+			const binaryString = atob(file.base64);
+			const bytes = new Uint8Array(binaryString.length);
+			for (let i = 0; i < binaryString.length; i++) {
+				bytes[i] = binaryString.charCodeAt(i);
+			}
+			const blob = new Blob([bytes], { type: file.mimeType || 'application/octet-stream' });
+			const fieldName = file.fieldName || 'files';
+			formData.append(fieldName, blob, file.name);
+		}
+	}
+
+	return formData;
+}
+
+async function postOutboundMessage(payload: OutboundMessagePayload): Promise<string> {
+	const formData = buildFormData(payload);
+	const resp = await httpClient.post<string>('/api/mailbox/out', formData, {
+		headers: { 'Content-Type': 'multipart/form-data' },
+		responseType: 'text'
+	});
+	return resp.data;
+}
+
 const httpPat: PatClient = {
 	getRMSList,
 	getBandwidths,
@@ -133,7 +236,15 @@ const httpPat: PatClient = {
 	getAlias,
 	setAlias,
 	deleteAlias,
-	reload
+	reload,
+	getMailbox,
+	getMessage,
+	deleteMessage,
+	getAttachment,
+	getAttachmentText,
+	setMailboxRead,
+	moveMessage,
+	postOutboundMessage
 };
 
 const ipcPat: PatClient = {
@@ -152,7 +263,17 @@ const ipcPat: PatClient = {
 	getAlias: (alias) => rendererGlobal!.api!.getAlias(alias),
 	setAlias: (alias, value) => rendererGlobal!.api!.setAlias(alias, value),
 	deleteAlias: (alias) => rendererGlobal!.api!.deleteAlias(alias),
-	reload: () => rendererGlobal!.api!.reload()
+	reload: () => rendererGlobal!.api!.reload(),
+	getMailbox: (box) => rendererGlobal!.api!.getMailbox(box),
+	getMessage: (box, mid) => rendererGlobal!.api!.getMessage(box, mid),
+	deleteMessage: (box, mid) => rendererGlobal!.api!.deleteMessage(box, mid),
+	getAttachment: (box, mid, attachment, options) =>
+		rendererGlobal!.api!.getAttachment(box, mid, attachment, options),
+	getAttachmentText: (box, mid, attachment, options) =>
+		rendererGlobal!.api!.getAttachmentText(box, mid, attachment, options),
+	setMailboxRead: (box, mid, read) => rendererGlobal!.api!.setMailboxRead(box, mid, read),
+	moveMessage: (box, mid) => rendererGlobal!.api!.moveMessage(box, mid),
+	postOutboundMessage: (payload) => rendererGlobal!.api!.postOutboundMessage(payload)
 };
 
 const pat: PatClient = isElectronRenderer ? ipcPat : httpPat;

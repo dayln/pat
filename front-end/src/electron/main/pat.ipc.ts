@@ -8,7 +8,10 @@ import type {
 	DisconnectParams,
 	PositionReportPayload,
 	QsyPayload,
-	PatConfig
+	PatConfig,
+	MailboxBox,
+	AttachmentRequestOptions,
+	OutboundMessagePayload
 } from '../../shared/pat.types';
 
 let patProcess: ChildProcess | null = null;
@@ -157,5 +160,55 @@ export function setupIPChandlers() {
 
 	ipcMain.handle('pat:reload', () => {
 		return client.reload();
+	});
+
+	ipcMain.handle('pat:getMailbox', (_event, box: MailboxBox) => {
+		return client.getMailbox(box);
+	});
+
+	ipcMain.handle('pat:getMessage', (_event, box: MailboxBox, mid: string) => {
+		return client.getMessage(box, mid);
+	});
+
+	ipcMain.handle('pat:deleteMessage', (_event, box: MailboxBox, mid: string) => {
+		return client.deleteMessage(box, mid);
+	});
+
+	ipcMain.handle(
+		'pat:getAttachment',
+		(
+			_event,
+			box: MailboxBox,
+			mid: string,
+			attachment: string,
+			options?: AttachmentRequestOptions
+		) => {
+			return client.getAttachment(box, mid, attachment, options);
+		}
+	);
+
+	ipcMain.handle(
+		'pat:getAttachmentText',
+		(
+			_event,
+			box: MailboxBox,
+			mid: string,
+			attachment: string,
+			options?: AttachmentRequestOptions
+		) => {
+			return client.getAttachmentText(box, mid, attachment, options);
+		}
+	);
+
+	ipcMain.handle('pat:setMailboxRead', (_event, box: MailboxBox, mid: string, read: boolean) => {
+		return client.setMailboxRead(box, mid, read);
+	});
+
+	ipcMain.handle('pat:moveMessage', (_event, box: MailboxBox, mid: string) => {
+		return client.moveMessage(box, mid);
+	});
+
+	ipcMain.handle('pat:postOutboundMessage', (_event, payload: OutboundMessagePayload) => {
+		return client.postOutboundMessage(payload);
 	});
 }
