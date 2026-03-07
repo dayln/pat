@@ -253,6 +253,33 @@ describe('pat client selection', () => {
 		expect(result).toEqual(gps);
 	});
 
+	describe('phase 1 endpoints', () => {
+		it('routes sendQSY to the qsy endpoint', async () => {
+			vi.stubGlobal('window', {});
+			httpPostMock.mockResolvedValue({ status: 200 });
+
+			const { default: pat } = await import('./pat.api');
+			await pat.sendQSY({ transport: 'ardop', freq: 14105.5 });
+
+			expect(httpPostMock).toHaveBeenCalledWith('/api/qsy', {
+				transport: 'ardop',
+				freq: 14105.5
+			});
+		});
+
+		it('routes getBandwidths with mode param', async () => {
+			vi.stubGlobal('window', {});
+			const bandwidths = { mode: 'ardop', bandwidths: ['500', '1000'], default: '500' };
+			httpGetMock.mockResolvedValue({ data: bandwidths });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getBandwidths('ardop');
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/bandwidths', { params: { mode: 'ardop' } });
+			expect(result).toEqual(bandwidths);
+		});
+	});
+
 	describe('config endpoints', () => {
 		it('routes getConfig to the config endpoint', async () => {
 			vi.stubGlobal('window', {});
@@ -275,6 +302,18 @@ describe('pat client selection', () => {
 			await pat.updateConfig(config);
 
 			expect(httpPutMock).toHaveBeenCalledWith('/api/config', config);
+		});
+
+		it('routes getConnectAliases to non-deprecated endpoint', async () => {
+			vi.stubGlobal('window', {});
+			const aliases = { ALIAS1: 'ardop:///K1ABC' };
+			httpGetMock.mockResolvedValue({ data: aliases });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getConnectAliases();
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/config/connect_aliases');
+			expect(result).toEqual(aliases);
 		});
 	});
 

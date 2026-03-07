@@ -59,7 +59,7 @@ async function getBandwidths(mode: string) {
 }
 
 async function getConnectAliases() {
-	const resp = await httpClient.get<ConnectionAliases>('/api/connect_aliases');
+	const resp = await httpClient.get<ConnectionAliases>('/api/config/connect_aliases');
 	return resp.data;
 }
 
