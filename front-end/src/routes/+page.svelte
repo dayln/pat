@@ -97,7 +97,12 @@
 	<section class="panel" aria-label="Pat process status">
 		<div class="section-header">
 			<h2>Pat Status</h2>
-			<button type="button" class="primary-button" onclick={refreshStatus} disabled={isStatusLoading}>
+			<button
+				type="button"
+				class="primary-button"
+				onclick={refreshStatus}
+				disabled={isStatusLoading}
+			>
 				{isStatusLoading ? 'Checking status...' : 'Refresh Status'}
 			</button>
 		</div>
