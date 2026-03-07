@@ -184,7 +184,12 @@ describe('pat client selection', () => {
 				getFormData: vi.fn(),
 				postFormData: vi.fn(),
 				getFormTemplate: vi.fn(),
-				getFormAsset: vi.fn()
+				getFormAsset: vi.fn(),
+				checkNewRelease: vi.fn(),
+				checkAccountExists: vi.fn(),
+				registerAccount: vi.fn(),
+				getPasswordRecoveryEmail: vi.fn(),
+				setPasswordRecoveryEmail: vi.fn()
 			}
 		});
 
@@ -231,7 +236,12 @@ describe('pat client selection', () => {
 				getFormData: vi.fn(),
 				postFormData: vi.fn(),
 				getFormTemplate: vi.fn(),
-				getFormAsset: vi.fn()
+				getFormAsset: vi.fn(),
+				checkNewRelease: vi.fn(),
+				checkAccountExists: vi.fn(),
+				registerAccount: vi.fn(),
+				getPasswordRecoveryEmail: vi.fn(),
+				setPasswordRecoveryEmail: vi.fn()
 			}
 		});
 
@@ -650,6 +660,101 @@ describe('pat client selection', () => {
 				responseType: 'arraybuffer'
 			});
 			expect(result).toBe(buffer);
+		});
+	});
+
+	describe('winlink account endpoints', () => {
+		it('routes checkNewRelease and returns release on 200', async () => {
+			vi.stubGlobal('window', {});
+			const release = { version: 'v1.0.0', release_url: 'https://example.com/release' };
+			httpGetMock.mockResolvedValue({ status: 200, data: release });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.checkNewRelease();
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/new-release-check', {
+				validateStatus: expect.any(Function)
+			});
+			expect(result).toEqual(release);
+		});
+
+		it('routes checkNewRelease and returns null on 204', async () => {
+			vi.stubGlobal('window', {});
+			httpGetMock.mockResolvedValue({ status: 204 });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.checkNewRelease();
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/new-release-check', {
+				validateStatus: expect.any(Function)
+			});
+			expect(result).toBeNull();
+		});
+
+		it('routes checkAccountExists with callsign param', async () => {
+			vi.stubGlobal('window', {});
+			const response = { callsign: 'W1ABC', exists: true };
+			httpGetMock.mockResolvedValue({ data: response });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.checkAccountExists('W1ABC');
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/winlink-account/registration', {
+				params: { callsign: 'W1ABC' }
+			});
+			expect(result).toEqual(response);
+		});
+
+		it('routes checkAccountExists without callsign param', async () => {
+			vi.stubGlobal('window', {});
+			const response = { callsign: 'W1ABC', exists: false };
+			httpGetMock.mockResolvedValue({ data: response });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.checkAccountExists();
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/winlink-account/registration', {
+				params: undefined
+			});
+			expect(result).toEqual(response);
+		});
+
+		it('routes registerAccount with POST', async () => {
+			vi.stubGlobal('window', {});
+			const payload = { callsign: 'W1ABC', password: 'test123', recovery_email: 'test@test.com' };
+			httpPostMock.mockResolvedValue({ data: payload });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.registerAccount(payload);
+
+			expect(httpPostMock).toHaveBeenCalledWith('/api/winlink-account/registration', payload);
+			expect(result).toEqual(payload);
+		});
+
+		it('routes getPasswordRecoveryEmail', async () => {
+			vi.stubGlobal('window', {});
+			const response = { recovery_email: 'test@test.com' };
+			httpGetMock.mockResolvedValue({ data: response });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.getPasswordRecoveryEmail();
+
+			expect(httpGetMock).toHaveBeenCalledWith('/api/winlink-account/password-recovery-email');
+			expect(result).toEqual(response);
+		});
+
+		it('routes setPasswordRecoveryEmail with PUT', async () => {
+			vi.stubGlobal('window', {});
+			const response = { recovery_email: 'new@test.com' };
+			httpPutMock.mockResolvedValue({ data: response });
+
+			const { default: pat } = await import('./pat.api');
+			const result = await pat.setPasswordRecoveryEmail('new@test.com');
+
+			expect(httpPutMock).toHaveBeenCalledWith('/api/winlink-account/password-recovery-email', {
+				recovery_email: 'new@test.com'
+			});
+			expect(result).toEqual(response);
 		});
 	});
 });

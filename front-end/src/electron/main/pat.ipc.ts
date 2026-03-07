@@ -13,7 +13,8 @@ import type {
 	AttachmentRequestOptions,
 	OutboundMessagePayload,
 	TemplateQueryOptions,
-	FormSubmissionPayload
+	FormSubmissionPayload,
+	RegistrationPayload
 } from '../../shared/pat.types';
 
 let patProcess: ChildProcess | null = null;
@@ -244,4 +245,24 @@ export function setupIPChandlers() {
 			return client.getFormAsset(path, responseType);
 		}
 	);
+
+	ipcMain.handle('pat:checkNewRelease', () => {
+		return client.checkNewRelease();
+	});
+
+	ipcMain.handle('pat:checkAccountExists', (_event, callsign?: string) => {
+		return client.checkAccountExists(callsign);
+	});
+
+	ipcMain.handle('pat:registerAccount', (_event, payload: RegistrationPayload) => {
+		return client.registerAccount(payload);
+	});
+
+	ipcMain.handle('pat:getPasswordRecoveryEmail', () => {
+		return client.getPasswordRecoveryEmail();
+	});
+
+	ipcMain.handle('pat:setPasswordRecoveryEmail', (_event, email: string) => {
+		return client.setPasswordRecoveryEmail(email);
+	});
 }

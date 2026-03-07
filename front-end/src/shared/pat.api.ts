@@ -21,7 +21,11 @@ import type {
 	FormsUpdateResponse,
 	TemplateQueryOptions,
 	FormMessage,
-	FormSubmissionPayload
+	FormSubmissionPayload,
+	LatestRelease,
+	AccountExistsResponse,
+	RegistrationPayload,
+	RecoveryEmailResponse
 } from './pat.types';
 import { httpClient } from './httpClient';
 
@@ -288,6 +292,47 @@ async function getFormAsset(
 	return resp.data;
 }
 
+async function checkNewRelease(): Promise<LatestRelease | null> {
+	const resp = await httpClient.get<LatestRelease>('/api/new-release-check', {
+		validateStatus: (status) => status === 200 || status === 204
+	});
+	if (resp.status === 204) {
+		return null;
+	}
+	return resp.data;
+}
+
+async function checkAccountExists(callsign?: string): Promise<AccountExistsResponse> {
+	const params = callsign ? { callsign } : undefined;
+	const resp = await httpClient.get<AccountExistsResponse>('/api/winlink-account/registration', {
+		params
+	});
+	return resp.data;
+}
+
+async function registerAccount(payload: RegistrationPayload): Promise<RegistrationPayload> {
+	const resp = await httpClient.post<RegistrationPayload>(
+		'/api/winlink-account/registration',
+		payload
+	);
+	return resp.data;
+}
+
+async function getPasswordRecoveryEmail(): Promise<RecoveryEmailResponse> {
+	const resp = await httpClient.get<RecoveryEmailResponse>(
+		'/api/winlink-account/password-recovery-email'
+	);
+	return resp.data;
+}
+
+async function setPasswordRecoveryEmail(email: string): Promise<RecoveryEmailResponse> {
+	const resp = await httpClient.put<RecoveryEmailResponse>(
+		'/api/winlink-account/password-recovery-email',
+		{ recovery_email: email }
+	);
+	return resp.data;
+}
+
 const httpPat: PatClient = {
 	getRMSList,
 	getBandwidths,
@@ -319,7 +364,12 @@ const httpPat: PatClient = {
 	getFormData,
 	postFormData,
 	getFormTemplate,
-	getFormAsset
+	getFormAsset,
+	checkNewRelease,
+	checkAccountExists,
+	registerAccount,
+	getPasswordRecoveryEmail,
+	setPasswordRecoveryEmail
 };
 
 const ipcPat: PatClient = {
@@ -355,7 +405,12 @@ const ipcPat: PatClient = {
 	getFormData: () => rendererGlobal!.api!.getFormData(),
 	postFormData: (payload) => rendererGlobal!.api!.postFormData(payload),
 	getFormTemplate: (options) => rendererGlobal!.api!.getFormTemplate(options),
-	getFormAsset: (path, responseType) => rendererGlobal!.api!.getFormAsset(path, responseType)
+	getFormAsset: (path, responseType) => rendererGlobal!.api!.getFormAsset(path, responseType),
+	checkNewRelease: () => rendererGlobal!.api!.checkNewRelease(),
+	checkAccountExists: (callsign) => rendererGlobal!.api!.checkAccountExists(callsign),
+	registerAccount: (payload) => rendererGlobal!.api!.registerAccount(payload),
+	getPasswordRecoveryEmail: () => rendererGlobal!.api!.getPasswordRecoveryEmail(),
+	setPasswordRecoveryEmail: (email) => rendererGlobal!.api!.setPasswordRecoveryEmail(email)
 };
 
 const pat: PatClient = isElectronRenderer ? ipcPat : httpPat;

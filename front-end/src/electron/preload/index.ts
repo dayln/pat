@@ -10,7 +10,8 @@ import type {
 	AttachmentRequestOptions,
 	OutboundMessagePayload,
 	TemplateQueryOptions,
-	FormSubmissionPayload
+	FormSubmissionPayload,
+	RegistrationPayload
 } from '../../shared/pat.types';
 
 const api = {
@@ -66,7 +67,14 @@ const api = {
 	getFormTemplate: (options: TemplateQueryOptions) =>
 		ipcRenderer.invoke('pat:getFormTemplate', options),
 	getFormAsset: (path: string, responseType?: 'text' | 'arraybuffer') =>
-		ipcRenderer.invoke('pat:getFormAsset', path, responseType)
+		ipcRenderer.invoke('pat:getFormAsset', path, responseType),
+	checkNewRelease: () => ipcRenderer.invoke('pat:checkNewRelease'),
+	checkAccountExists: (callsign?: string) => ipcRenderer.invoke('pat:checkAccountExists', callsign),
+	registerAccount: (payload: RegistrationPayload) =>
+		ipcRenderer.invoke('pat:registerAccount', payload),
+	getPasswordRecoveryEmail: () => ipcRenderer.invoke('pat:getPasswordRecoveryEmail'),
+	setPasswordRecoveryEmail: (email: string) =>
+		ipcRenderer.invoke('pat:setPasswordRecoveryEmail', email)
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

@@ -281,6 +281,26 @@ export interface FormSubmissionPayload {
 	responses?: Record<string, string>;
 }
 
+export interface LatestRelease {
+	version: string;
+	release_url: string;
+}
+
+export interface AccountExistsResponse {
+	callsign: string;
+	exists: boolean;
+}
+
+export interface RegistrationPayload {
+	callsign: string;
+	password: string;
+	recovery_email?: string;
+}
+
+export interface RecoveryEmailResponse {
+	recovery_email: string;
+}
+
 export interface PatClient {
 	getRMSList: (params: {
 		mode?: string;
@@ -331,4 +351,9 @@ export interface PatClient {
 		path: string,
 		responseType?: 'text' | 'arraybuffer'
 	) => Promise<string | ArrayBuffer>;
+	checkNewRelease: () => Promise<LatestRelease | null>;
+	checkAccountExists: (callsign?: string) => Promise<AccountExistsResponse>;
+	registerAccount: (payload: RegistrationPayload) => Promise<RegistrationPayload>;
+	getPasswordRecoveryEmail: () => Promise<RecoveryEmailResponse>;
+	setPasswordRecoveryEmail: (email: string) => Promise<RecoveryEmailResponse>;
 }
